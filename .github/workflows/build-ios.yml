@@ -1,0 +1,32 @@
+name: Construire application iPhone
+on:
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  build:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Extraire le projet
+        run: unzip -o TRRAAX-iPhone-Camera-source.zip
+      - run: brew install xcodegen
+      - name: Generer le projet
+        working-directory: ios
+        run: xcodegen generate
+      - name: Compiler pour Sideloadly
+        working-directory: ios
+        run: >-
+          xcodebuild -project BureauCamera.xcodeproj -scheme BureauCamera
+          -configuration Release -sdk iphoneos -destination "generic/platform=iOS"
+          -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+      - name: Preparer IPA
+        run: |
+          mkdir -p package/Payload
+          cp -R ios/build/Build/Products/Release-iphoneos/BureauCamera.app package/Payload/
+          cd package
+          zip -qr ../BureauCamera-unsigned.ipa Payload
+      - uses: actions/upload-artifact@v4
+        with:
+          name: BureauCamera-pour-Sideloadly
+          path: BureauCamera-unsigned.ipa
